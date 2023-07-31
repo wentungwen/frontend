@@ -1,19 +1,16 @@
 <template>
   <div>
-    <b-button v-b-toggle.sidebar-1>Toggle</b-button>
-    <b-sidebar
-      id="sidebar-1"
-      title="Sidebar"
-      shadow
-      class="d-flex flex-column p-2 bg-light"
-    >
+    <b-button v-b-toggle.sidebar-1 class="m-2 mr-0 btn-light"
+      ><b-icon-list></b-icon-list
+    ></b-button>
+    <b-sidebar id="sidebar-1" title="Language Helper" shadow>
       <b-col class="mb-3 flex-grow-1">
         <b-link
           href="/"
           class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-dark text-decoration-none"
         >
           <b-icon-bank></b-icon-bank>
-          <span class="fs-4 pl-2">language learner</span>
+          <span class="fs-4 pl-2">Help you to be a best language learner!</span>
         </b-link>
         <hr />
         <ul class="nav nav-pills flex-column mb-auto">

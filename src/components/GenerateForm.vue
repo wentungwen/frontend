@@ -6,7 +6,7 @@
         <b-form-select
           id="language-select"
           :options="languageOptions"
-          v-model="formData.language"
+          :value.sync="formData.language"
           placeholder="Choose a language"
           >I'm learning:</b-form-select
         >
@@ -35,41 +35,54 @@
           step="1"
         ></b-form-input>
       </b-form-group>
-      <!-- topic: textarea -->
+      <!-- topic: text input -->
       <b-form-group label="Which topic:" label-for="topic-input">
-        <b-form-textarea
+        <b-form-input
           id="topic-input"
           placeholder="topic"
           v-model="formData.topic"
-          rows="2"
-          max-rows="4"
-        ></b-form-textarea>
+          :required="true"
+        ></b-form-input>
       </b-form-group>
       <!-- Submit Button -->
-      <b-button type="submit" variant="primary">Submit</b-button>
+      <b-button @submit="submitForm" type="submit" variant="primary"
+        >Generate!</b-button
+      >
     </b-form>
   </div>
 </template>
 
 <script>
+import axios from "axios";
 export default {
   data() {
     return {
       formData: {
         language: "Dutch",
-        topic: "",
+        topic: "home",
         sentence_num: 3,
         level: "A1",
       },
       languageOptions: ["Dutch", "Japanese", "German"],
       levelOptions: ["A1", "A2", "B1", "B2"],
+      submit_msg: "",
     };
   },
   methods: {
-    submitForm() {
-      // Handle form submission here
+    generate_conversation(payload) {
+      axios
+        .post("http://127.0.0.1:5000/conversations", payload)
+        .then(() => {
+          this.submit_msg = "Conversation generated";
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    },
+    submitForm(evt) {
+      evt.preventDefault();
       console.log(this.formData);
-      // You can perform further actions, such as sending the data to the server, etc.
+      this.generate_conversation(this.formData);
     },
   },
 };
