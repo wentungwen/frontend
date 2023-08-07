@@ -6,8 +6,7 @@
         <b-form-select
           id="language-select"
           :options="languageOptions"
-          :value.sync="formData.language"
-          placeholder="Choose a language"
+          v-model="formData.lan_code"
           >I'm learning:</b-form-select
         >
       </b-form-group>
@@ -30,7 +29,7 @@
           placeholder="5"
           v-model="formData.sentence_num"
           type="range"
-          min="3"
+          min="1"
           max="10"
           step="1"
         ></b-form-input>
@@ -54,26 +53,37 @@
 
 <script>
 import axios from "axios";
+import { eventBus } from "@/main";
 export default {
   data() {
     return {
       formData: {
-        language: "Dutch",
+        lan_code: "es",
         topic: "home",
-        sentence_num: 3,
+        sentence_num: 1,
         level: "A1",
       },
-      languageOptions: ["Dutch", "Japanese", "German"],
+      languageOptions: [
+        { value: "nl", text: "Dutch" },
+        { value: "es", text: "Spanish" },
+        { value: "ja", text: "Japanese" },
+        { value: "de", text: "German" },
+      ],
       levelOptions: ["A1", "A2", "B1", "B2"],
-      submit_msg: "",
+      generated_data: {
+        conversations: [],
+        lan_code: null,
+      },
     };
   },
   methods: {
     generate_conversation(payload) {
       axios
         .post("http://127.0.0.1:5000/conversations", payload)
-        .then(() => {
-          this.submit_msg = "Conversation generated";
+        .then((response) => {
+          this.generated_data.conversations = JSON.parse(response.data);
+          this.generated_data.lan_code = this.formData.lan_code;
+          eventBus.$emit("generated_data", this.generated_data);
         })
         .catch((err) => {
           console.log(err);
@@ -87,7 +97,3 @@ export default {
   },
 };
 </script>
-
-<style>
-/* Add custom styling here if needed */
-</style>

@@ -10,7 +10,7 @@
           class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-dark text-decoration-none"
         >
           <b-icon-bank></b-icon-bank>
-          <span class="fs-4 pl-2">Help you to be a best language learner!</span>
+          <span class="pl-2">Saved conversations</span>
         </b-link>
         <hr />
         <ul class="nav nav-pills flex-column mb-auto">
@@ -21,7 +21,7 @@
           >
             <a href="#" class="nav-link active mb-2" aria-current="page">
               <b-icon-x-circle-fill></b-icon-x-circle-fill>
-              <span class="fs-4 pl-2">{{ conversation.title }}</span>
+              <span class="pl-2">{{ conversation.title }}</span>
             </a>
           </li>
         </ul>
@@ -33,13 +33,13 @@
           id="dropdownUser2"
         >
           <img
-            src="https://github.com/mdo.png"
+            src="https://avatars.githubusercontent.com/u/78141260?v=4"
             alt=""
             width="32"
             height="32"
             class="rounded-circle mr-2"
           />
-          <strong>mdo</strong>
+          <strong>username</strong>
         </b-link>
         <hr />
         <b-link href="#">Sign out</b-link>
