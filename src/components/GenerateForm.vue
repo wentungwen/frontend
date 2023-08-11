@@ -29,7 +29,7 @@
           placeholder="5"
           v-model="formData.sentence_num"
           type="range"
-          min="1"
+          min="2"
           max="10"
           step="1"
         ></b-form-input>
@@ -58,19 +58,19 @@ export default {
   data() {
     return {
       formData: {
-        lan_code: "es",
+        lan_code: "nl",
         topic: "home",
-        sentence_num: 1,
+        sentence_num: 2,
         level: "A1",
       },
       languageOptions: [
         { value: "nl", text: "Dutch" },
         { value: "es", text: "Spanish" },
         { value: "ja", text: "Japanese" },
-        { value: "de", text: "German" },
       ],
       levelOptions: ["A1", "A2", "B1", "B2"],
       generated_data: {
+        topic: null,
         conversations: [],
         lan_code: null,
       },
@@ -83,6 +83,7 @@ export default {
         .then((response) => {
           this.generated_data.conversations = JSON.parse(response.data);
           this.generated_data.lan_code = this.formData.lan_code;
+          this.generated_data.topic = this.formData.topic;
           eventBus.$emit("generated_data", this.generated_data);
         })
         .catch((err) => {
@@ -91,9 +92,11 @@ export default {
     },
     submitForm(evt) {
       evt.preventDefault();
-      console.log(this.formData);
       this.generate_conversation(this.formData);
     },
   },
+  //   created() {
+  //     this.generate_conversation(this.formData);
+  //   },
 };
 </script>
