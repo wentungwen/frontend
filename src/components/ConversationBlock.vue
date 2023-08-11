@@ -6,16 +6,24 @@
     <!-- Toolbar -->
     <b-button-toolbar class="toolbar">
       <b-button-group class="">
-        <b-button @click="translate_btn(received_data)" variant="secondary"
+        <b-button
+          @click="translate_btn(received_data)"
+          variant="secondary"
+          :disabled="is_editing"
           >Translate</b-button
         >
-        <b-button @click="copy_btn" variant="secondary">Copy</b-button>
+        <b-button @click="copy_btn" variant="secondary" :disabled="is_editing"
+          >Copy</b-button
+        >
         <b-button @click="edit_btn" variant="secondary">Edit</b-button>
-        <b-button @click="save_btn" variant="secondary">Save</b-button>
+        <b-button @click="save_btn" variant="secondary" :disabled="is_editing"
+          >Save</b-button
+        >
       </b-button-group>
     </b-button-toolbar>
     <!-- action alerts -->
     <b-alert :show="is_copied" class="m-3 alert-success">Copied!</b-alert>
+    <b-alert :show="is_saved" class="m-3 alert-success">Saved!</b-alert>
     <!-- conversation editing block -->
     <div v-if="is_editing" class="dialog-content m-3">
       <p v-for="(msg, idx) in edited_conversations" :key="idx">
@@ -40,10 +48,21 @@
         </p>
       </div>
       <div v-else>
-        <p v-for="(msg, idx) in received_data.conversations" :key="idx">
-          <b>{{ msg.sender }}:</b>
-          {{ msg.content }}
-        </p>
+        <div v-if="received_data && !this.loaded_conversation">
+          <p v-for="(msg, idx) in received_data.conversations" :key="idx">
+            <b>{{ msg.sender }}:</b>
+            {{ msg.content }}
+          </p>
+        </div>
+        <div v-else-if="this.loaded_conversation">
+          <p v-for="(msg, idx) in loaded_conversation.conversations" :key="idx">
+            <b>{{ msg.sender }}:</b>
+            {{ msg.content }}
+          </p>
+        </div>
+        <div v-else>
+          <p>...</p>
+        </div>
       </div>
     </div>
   </div>
@@ -56,32 +75,43 @@ export default {
   data() {
     return {
       is_copied: false,
+      is_saved: false,
       is_translation_shown: false,
       is_editing: false,
       translate_to_lan_code: "en",
       edited_conversations: [],
       translated_conversations: [],
-      received_data: {
-        lan_code: "nl",
-        conversations: [
-          {
-            content: "(conversation block) het meisje.",
-            sender: "A",
-          },
-          {
-            content: "(conversation block) Volgens de man.",
-            sender: "B",
-          },
-        ],
-      },
+      received_data: null,
     };
   },
   props: {
     conversation: {
       type: Object,
     },
+    loaded_conversation: {
+      type: Object,
+    },
   },
   methods: {
+    save_btn() {
+      const payload = {
+        data: this.received_data,
+      };
+      axios
+        .post("http://127.0.0.1:5000/save", payload)
+        .then((res) => {
+          if (res.status === 200) {
+            this.is_saved = true;
+            this.$emit("save_btn_clicked");
+            setTimeout(() => {
+              this.is_saved = false;
+            });
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        });
+    },
     edit_btn() {
       this.edited_conversations = this.received_data.conversations;
       this.is_editing = true;
@@ -93,25 +123,31 @@ export default {
     },
     translate_btn(received_data) {
       if (this.translated_conversations.length === 0) {
-        const payload = {
-          lan_code: received_data.lan_code,
-          conversations: received_data.conversations,
-          translate_to_lan_code: this.translate_to_lan_code,
-        };
-        // send to backend to translate
-        axios
-          .post("http://127.0.0.1:5000/translate", payload)
-          .then((res) => {
-            this.is_translation_shown = !this.is_translation_shown;
-            this.translated_conversations = res.data;
-            console.log(this.translated_conversations);
-          })
-          .catch((err) => {
-            console.log(err);
-          });
+        this.translate_content(
+          received_data.lan_code,
+          received_data.conversations,
+          this.translate_to_lan_code
+        );
       } else {
         this.is_translation_shown = !this.is_translation_shown;
       }
+    },
+    translate_content(lan_code, conversations, translate_to_lan_code) {
+      const payload = {
+        lan_code,
+        conversations,
+        translate_to_lan_code,
+      };
+      // send to backend to translate
+      axios
+        .post("http://127.0.0.1:5000/translate", payload)
+        .then((res) => {
+          this.is_translation_shown = !this.is_translation_shown;
+          this.translated_conversations = res.data;
+        })
+        .catch((err) => {
+          console.log(err);
+        });
     },
     copy_btn() {
       const conversationsDiv = this.$refs.copy_conversations;
@@ -130,25 +166,25 @@ export default {
         this.is_copied = false;
       }, 2000);
     },
-    save_btn() {
-      console.log("Save function clicked");
+  },
+  watch: {
+    loaded_conversation(loaded_data) {
+      if (loaded_data) {
+        this.received_data = loaded_data;
+      }
     },
   },
-  //   beforeUpdate() {
-  //     if (this.is_editing == false) {
-  //       // If data has been edited, emit the updated data
-  //       eventBus.$emit("received_conversations", this.received_data);
-  //     }
-  //   },
   mounted() {
     eventBus.$on("generated_data", (data) => {
       if (data) {
+        this.received_data = data;
+        this.received_data.translated_conversations =
+          this.translated_conversations;
+
+        eventBus.$emit("received_data", this.received_data);
         this.translated_conversations = [];
         this.edited_conversations = [];
         this.is_editing = false;
-        this.received_data = data;
-        console.log("ge", this.received_data);
-        eventBus.$emit("received_data", this.received_data);
       }
     });
   },

@@ -1,21 +1,30 @@
 <template>
   <div id="app">
-    <b-row v-if="conversations.length > 0">
-      <b-col class="col-auto"> <NavBar :conversations="conversations" /></b-col>
-      <b-col class="col-4">
-        <GenerateForm />
-        <ConversationBlock :conversation="conversations[active_conversation]" />
-      </b-col>
-      <b-col class="col picture-block">
-        <PictureBlock :messages="conversations[active_conversation].messages" />
-      </b-col>
-    </b-row>
-    <b-row v-else>
+    <b-row v-if="loading">
       <b-img
         style="max-width: 300px"
         :src="require('@/assets/loading.gif')"
         center
       ></b-img>
+    </b-row>
+    <b-row v-else>
+      <b-col class="col-auto">
+        <NavBar
+          :conversations="conversations"
+          @conversation_deleted="get_conversations"
+          @load_conversation="load_conversation"
+      /></b-col>
+      <b-col class="col-4">
+        <GenerateForm />
+        <ConversationBlock
+          :loaded_conversation="loaded_conversation"
+          :conversation="conversations[active_conversation]"
+          @save_btn_clicked="get_conversations"
+        />
+      </b-col>
+      <b-col class="col picture-block">
+        <PictureBlock />
+      </b-col>
     </b-row>
   </div>
 </template>
@@ -35,19 +44,40 @@ export default {
   },
   data() {
     return {
-      loading: true,
+      loading: false,
       active_conversation: 1,
       conversations: [],
+      loaded_conversation: null,
     };
   },
   methods: {
-    get_conversations() {
-      axios.get("http://127.0.0.1:5000/conversations").then((res) => {
-        if (res.data) {
-          this.conversations = res.data["data"];
-          this.loading = false;
+    load_conversation(id) {
+      for (let i = 0; i < this.conversations.length; i++) {
+        if (this.conversations[i].uuid == id) {
+          this.loaded_conversation = this.conversations[i];
+          break;
         }
-      });
+      }
+    },
+    save_btn_clicked() {
+      this.get_conversations();
+    },
+    get_conversations() {
+      axios
+        .get("http://127.0.0.1:5000/conversations")
+        .then((res) => {
+          if (res.data) {
+            this.conversations = res.data["data"];
+          } else {
+            this.conversations = [];
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+        })
+        .finally(() => {
+          this.loading = false;
+        });
     },
   },
   created() {
