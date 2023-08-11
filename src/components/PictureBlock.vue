@@ -1,52 +1,84 @@
 <template>
   <b-col class="d-flex flex-column">
     <!-- play and stop button -->
-    <b-button-group class="mt-4 px-4" role="group" aria-label="video-control">
-      <b-button type="button" class="btn btn-primary" @click="play_slides">
-        <b-icon icon="play-fill"></b-icon> Play
-      </b-button>
-      <b-button type="button" class="btn btn-secondary" @click="stop_slides">
-        <b-icon icon="stop-fill"></b-icon> Stop
-      </b-button>
-      <b-button type="button" class="btn btn-secondary" @click="stop_slides">
-        Slower
-      </b-button>
-    </b-button-group>
-    <!-- <div>
-      <b-button
-        @click="
-          speak_text(
-            received_data.conversations[current_slide].content,
-            received_data.lan_code,
-            speech_speed
-          )
-        "
-        >Speak "Hello, world!" in English (Slower)</b-button
+    <b-col>
+      <b-button-group class="mt-4 px-4" role="group" aria-label="video-control">
+        <b-button
+          type="button"
+          class="btn btn-primary"
+          @click="play_slides_btn"
+          :disabled="sliding"
+        >
+          <b-icon icon="play-fill"></b-icon> Play
+        </b-button>
+        <b-button
+          type="button"
+          class="btn btn-primary"
+          @click="stop_slides_btn"
+          :disabled="!sliding"
+        >
+          <b-icon icon="stop-fill"></b-icon> Stop
+        </b-button>
+        <b-button class="btn btn-primary">
+          <b-form-group
+            :label="'Speed: ' + speech_speed"
+            label-for="sentence-num-input"
+          >
+            <b-form-input
+              id="sentence-num-input"
+              type="range"
+              :min="MIN_SPEED"
+              :max="MAX_SPEED"
+              :step="SPEED_INCREMENT"
+              v-model="speech_speed"
+              @change="adjust_speed"
+            ></b-form-input>
+          </b-form-group>
+        </b-button>
+        <b-button class="btn btn-primary">
+          <b-form-group
+            :label="'Volumn: ' + volumn"
+            label-for="sentence-num-input"
+          >
+            <b-form-input
+              id="sentence-num-input"
+              type="range"
+              :min="MIN_VOLUMN"
+              :max="MAX_VOLUMN"
+              :step="VOLUMN_INCREMENT"
+              v-model="volumn"
+              @change="adjust_volumn"
+            ></b-form-input>
+          </b-form-group>
+        </b-button>
+      </b-button-group>
+    </b-col>
+    <!-- Alert -->
+    <b-col>
+      <b-alert :show="is_alert_shown" class="m-3 alert-warning"
+        >It is fastest!</b-alert
       >
-      <b-button @click="stop_speaking">Stop</b-button>
-    </div> -->
+    </b-col>
     <!-- Text slides with image -->
-    <b-carousel
-      fade
-      controls
-      indicators
-      v-model="current_slide"
-      :interval="slides_speed"
-      background="#ababab"
-      class="pic-carousel"
-      @sliding-start="onSlideStart"
-      @sliding-end="onSlideEnd"
-    >
-      <b-carousel-slide
-        v-for="(conversation, idx) in received_data.conversations"
-        :text="conversation.content"
-        :key="idx"
-        :current_slide="idx"
-        :img-src="slide_image(conversation.sender)"
-      ></b-carousel-slide>
-    </b-carousel>
-    Current_slide #: {{ current_slide }}<br />
-    Sliding: {{ sliding }}
+    <b-col>
+      <b-carousel
+        fade
+        controls
+        indicators
+        v-model="current_slide"
+        :interval="slides_speed"
+        background="#ababab"
+        class="pic-carousel"
+      >
+        <b-carousel-slide
+          v-for="(conversation, idx) in received_data.conversations"
+          :text="conversation.content"
+          :key="idx"
+          :current_slide="idx"
+          :img-src="slide_image(conversation.sender)"
+        ></b-carousel-slide>
+      </b-carousel>
+    </b-col>
   </b-col>
 </template>
 
@@ -55,17 +87,26 @@ import { eventBus } from "@/main";
 export default {
   data() {
     return {
+      MIN_SPEED: 0.5,
+      MAX_SPEED: 1.2,
+      SPEED_INCREMENT: 0.1,
+      MIN_VOLUMN: 0,
+      MAX_VOLUMN: 100,
+      VOLUMN_INCREMENT: 1,
+      volumn: 100,
       speech_speed: 0.8,
       speech_utterance: null,
       current_slide: 0,
-      sliding: null,
       slides_speed: 0,
+      sliding: false,
+      is_alert_shown: false,
       slide_imgs: {
         A: require("../assets/person_a.png"),
         B: require("../assets/person_b.png"),
       },
       received_data: {
         lan_code: "nl",
+        translated_conversations: [],
         conversations: [
           {
             content: "het meisje.",
@@ -88,74 +129,92 @@ export default {
     };
   },
   props: {
-    messages: {
-      type: Array,
-    },
+    // messages: {
+    //   type: Array,
+    // },
   },
   methods: {
-    async play_slides() {
+    adjust_volumn() {
+      if (this.speech_utterance) {
+        this.speech_utterance.volume = this.volumn;
+      }
+    },
+    adjust_speed(request) {
+      this.is_alert_shown = false;
+      if (request === "slower") {
+        if (this.speech_speed > this.MIN_SPEED) {
+          this.speech_speed -= this.SPEED_INCREMENT;
+        } else {
+          this.is_alert_shown = true;
+          setTimeout(() => {
+            this.is_alert_shown = false;
+          }, 2000);
+        }
+      } else if (request === "faster") {
+        if (this.speech_speed < this.MAX_SPEED) {
+          this.speech_speed += this.SPEED_INCREMENT;
+        } else {
+          this.is_alert_shown = true;
+          setTimeout(() => {
+            this.is_alert_shown = false;
+          }, 2000);
+        }
+      }
+    },
+    async play_slides_btn() {
+      this.current_slide = 0;
       this.sliding = true;
-      this.slides_speed = 1000;
       for (
         let i = this.current_slide;
         i < this.received_data.conversations.length;
         i++
       ) {
-        console.log("Playing slide:", i);
-        const current_content = this.received_data.conversations[i].content;
-        this.speak_text(
-          current_content,
-          this.received_data.lan_code,
-          this.speech_speed
-        );
-
-        await new Promise((resolve) => {
-          this.speech_utterance.onend = resolve; // Resolve the promise when the speech is finished
-        });
-
-        console.log("Finished slide:", i);
-        if (this.sliding === false) {
-          break; // Stop the loop if sliding is set to false (stop button clicked)
+        if (this.sliding) {
+          await this.play_one_slide(i);
+          this.current_slide++;
+        } else {
+          break;
         }
       }
-      this.sliding = false; // Set sliding to false after all slides are played
-    },
-
-    async exampleFunction() {
-      try {
-        const result = await new Promise((reolve, reject) => {
-          setTimeout(() => {
-            reolve("Operation completed successfully!");
-          }, 2000);
-        });
-        console.log(result);
-      } catch (error) {
-        console.error("Error:", error);
-      }
-    },
-
-    stop_slides() {
-      this.slides_speed = 0;
-    },
-    speak_text(text, languageCode, rate) {
-      this.speech_utterance = new SpeechSynthesisUtterance(text);
-      this.speech_utterance.lang = languageCode;
-      this.speech_utterance.rate = rate; // Adjust the speaking speed
-      window.speechSynthesis.speak(this.speech_utterance);
-    },
-    stop_speaking() {
-      if (this.speech_utterance) {
-        window.speechSynthesis.cancel();
-      }
-    },
-    onSlideStart(slide) {
-      this.sliding = true;
-      console.log(slide);
-    },
-    onSlideEnd(slide) {
-      console.log("end", slide);
       this.sliding = false;
-      this.slides_speed = 0;
+    },
+
+    async play_one_slide(i) {
+      const current_content = this.received_data.conversations[i].content;
+      const lan_code = this.received_data.lan_code;
+      const speech_speed = this.speech_speed;
+      const speech_time = this.calculate_speech_time(current_content, lan_code);
+      const speech_volumn = this.volumn;
+
+      this.speak_text(current_content, lan_code, speech_speed, speech_volumn);
+
+      // Wait for the speech to finish
+      await new Promise((resolve) => {
+        setTimeout(() => {
+          resolve();
+        }, speech_time);
+      });
+    },
+
+    calculate_speech_time(content, lan_code) {
+      let characters_per_second = 7.5;
+      if (lan_code === "ja") {
+        characters_per_second = 4;
+      }
+      const speech_time = (content.length / characters_per_second) * 1000;
+      return speech_time;
+    },
+
+    stop_slides_btn() {
+      this.sliding = false;
+      window.speechSynthesis.cancel();
+    },
+    speak_text(text, languageCode, rate, volumn) {
+      const speech_utterance = new SpeechSynthesisUtterance(text);
+      speech_utterance.lang = languageCode;
+      speech_utterance.rate = rate;
+      speech_utterance.volume = volumn;
+      window.speechSynthesis.speak(speech_utterance);
     },
   },
   computed: {
@@ -166,13 +225,11 @@ export default {
     },
   },
   watch: {
-    // current_slide(slide) {
-    //   console.log(slide);
-    //   if (slide == this.received_data.conversations.length - 1) {
-    //     this.stop_slides();
-    //     console.log("end slides");
-    //   }
-    // },
+    current_slide(slide) {
+      if (slide == this.received_data.conversations.length) {
+        this.current_slide = 0;
+      }
+    },
   },
   mounted() {
     eventBus.$on("received_data", (data) => {
